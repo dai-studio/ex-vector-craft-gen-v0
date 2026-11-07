@@ -4,6 +4,9 @@ An original voxel sandbox in plain HTML and Three.js: flat "vector" colours,
 endless seeded terrain with hills, beaches, lakes and trees, a day/night cycle,
 and blocks you can break and place. No build step.
 
+Deployed: https://ex-vector-craft-gen-v0.dai.studio/
+
+
 ## Run
 
 ```sh
