@@ -1,0 +1,85 @@
+:root {
+  --ink: #f4f1e8;
+  --panel: rgba(16, 20, 32, 0.72);
+  --edge: rgba(255, 255, 255, 0.18);
+  --accent: #ffd166;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #0b1026;
+  color: var(--ink);
+  font: 14px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  user-select: none;
+}
+
+#game { display: block; width: 100vw; height: 100vh; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; }
+
+.crosshair {
+  position: absolute; left: 50%; top: 50%;
+  width: 18px; height: 18px; margin: -9px 0 0 -9px;
+}
+.crosshair::before, .crosshair::after {
+  content: ""; position: absolute; background: var(--ink);
+  mix-blend-mode: difference;
+}
+.crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+.crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
+
+.info {
+  position: absolute; left: 12px; top: 12px;
+  padding: 8px 10px; background: var(--panel); border: 1px solid var(--edge);
+  border-radius: 6px; white-space: pre;
+}
+
+.hotbar {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  display: flex; gap: 6px; padding: 6px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 8px;
+}
+.slot {
+  position: relative; width: 46px; height: 46px; border-radius: 6px;
+  border: 2px solid transparent;
+}
+.slot.selected { border-color: var(--accent); }
+.slot .cube { position: absolute; inset: 7px; }
+.slot .key { position: absolute; left: 3px; top: 1px; font-size: 10px; opacity: 0.8; }
+.slot-name {
+  position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%);
+  padding: 2px 8px; background: var(--panel); border-radius: 4px;
+  transition: opacity 0.4s;
+}
+
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(8, 10, 20, 0.55); pointer-events: auto; cursor: pointer;
+}
+.overlay[hidden] { display: none; }
+.card {
+  max-width: 420px; padding: 22px 26px; background: var(--panel);
+  border: 1px solid var(--edge); border-radius: 10px; text-align: left;
+}
+.card h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: 0.04em; color: var(--accent); }
+.card p { margin: 0 0 14px; opacity: 0.85; }
+.card table { border-collapse: collapse; width: 100%; margin-bottom: 14px; }
+.card td { padding: 2px 0; }
+.card td:first-child { color: var(--accent); width: 42%; }
+.card button {
+  font: inherit; color: var(--ink); background: transparent; cursor: pointer;
+  border: 1px solid var(--edge); border-radius: 6px; padding: 6px 12px;
+}
+.card button:hover { border-color: var(--accent); }
+.card .row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.card .hint { font-size: 12px; opacity: 0.7; }
+
+@media (max-width: 600px) {
+  .slot { width: 32px; height: 32px; }
+  .slot .cube { inset: 4px; }
+  .card { margin: 0 16px; }
+}

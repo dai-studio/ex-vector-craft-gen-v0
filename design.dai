@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dai="https://dai.studio/schema/dai/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" targetNamespace="https://dai.studio/workflow">
+  <bpmn:process id="Process_1" name="VoxelCraft - Minecraft-like game in Three.js (single HTML file)" isExecutable="false">
+    <bpmn:extensionElements>
+      <dai:workflowMeta description="Architecture of a Minecraft-like first-person voxel sandbox built with Three.js and delivered as a single self-contained index.html. Covers engine bootstrap, chunked procedural world and meshing, player physics and block interaction, HUD, persistence, the per-frame game loop, plus the rules, decisions, tests and risks an agent must respect when generating the file." defaultModel="claude-opus-4" targetLanguage="JavaScript" targetFramework="Three.js" version="1.0">
+        <dai:taskTypeEntry type="dai.types.software.component" stepType="component" description="A logical section/module of the single index.html script" />
+        <dai:taskTypeEntry type="dai.types.software.model" stepType="model" description="A JavaScript data structure used by the game" />
+        <dai:taskTypeEntry type="dai.types.ai.context" stepType="context" description="Background knowledge, grounding data, or reference material that informs downstream steps. Does not produce output itself — it shapes how the AI reasons." />
+        <dai:taskTypeEntry type="dai.types.ai.rule" stepType="rule" description="A constraint, policy, or business rule the AI must respect and enforce throughout the workflow. Scope, priority, and enforcement level determine how strictly it applies." />
+        <dai:taskTypeEntry type="dai.types.software.decision" stepType="" description="A technical or architecture decision record (ADR): the context, the options considered, the decision and its consequences. For business decisions use Business → Decision." />
+        <dai:taskTypeEntry type="dai.types.software.dependency" stepType="dependency" description="An external library, package, service, API, or resource the project relies on. Documents the source, version, type, and license for dependency management and compliance." />
+        <dai:taskTypeEntry type="dai.types.software.event" stepType="event" description="A domain event in an event-driven or microservice architecture — its producer, consumers, payload schema, and broker. Documents the async contracts between services." />
+        <dai:taskTypeEntry stepType="" description="A generic work item or activity in the process flow." />
+        <dai:taskTypeEntry type="dai.types.software.test" stepType="test" description="A test case or verification condition — documents what is being tested, how to run it, and what constitutes a pass." />
+        <dai:taskTypeEntry type="dai.types.business.risk-item" stepType="risk" description="A potential threat or uncertainty that could negatively affect the project or outcome. Tracks probability, impact, and mitigation." />
+      </dai:workflowMeta>
+    </bpmn:extensionElements>
+    <bpmn:subProcess id="Grp_context" name="Project Context" dai:notes="Global context, constraints and decisions that apply to the whole game.">
+      <bpmn:task id="Ctx_goal" name="Game concept" dai:type="dai.types.ai.context" dai:stepType="context" dai:notes="High-level description of what is being built." dai:source="manual" dai:format="text" dai:scope="global" dai:content="A browser-based, Minecraft-like voxel sandbox. The player spawns in a procedurally generated block world, walks and jumps in first person, breaks blocks with left click and places the selected hotbar block with right click. Infinite-feeling terrain is streamed in 16x16 chunks around the player." />
+      <bpmn:task id="Rule_single_file" name="Single HTML file" dai:type="dai.types.ai.rule" dai:stepType="rule" dai:notes="The entire game (markup, CSS, JS, textures) ships as ONE index.html. No build step, no bundler, no local asset files. It must run by double-clicking the file or serving it statically." dai:scope="global" dai:rulePriority="critical" dai:enforcement="hard" />
+      <bpmn:task id="Rule_cdn" name="Three.js via importmap" dai:type="dai.types.ai.rule" dai:stepType="rule" dai:notes="Load three and three/addons from a CDN using &#60;script type=&#34;importmap&#34;&#62; and a single &#60;script type=&#34;module&#34;&#62;. Pin an exact version." dai:scope="global" dai:rulePriority="high" dai:enforcement="hard" />
+      <bpmn:task id="Rule_textures" name="Procedural textures only" dai:type="dai.types.ai.rule" dai:stepType="rule" dai:notes="All block textures are painted at startup onto a &#60;canvas&#62; texture atlas (16x16 px per tile) and used with NearestFilter for the pixel-art look. No external images." dai:scope="global" dai:rulePriority="high" dai:enforcement="hard" />
+      <bpmn:task id="Rule_perf" name="60 FPS budget" dai:type="dai.types.ai.rule" dai:stepType="rule" dai:notes="Target 60 FPS on integrated GPUs at render distance 4. Never create one Mesh per block; mesh per chunk with hidden-face culling. Remesh at most 2 dirty chunks per frame." dai:scope="global" dai:rulePriority="high" dai:enforcement="soft" />
+      <bpmn:task id="Dec_meshing" name="Chunk meshing over InstancedMesh" dai:type="dai.types.software.decision" dai:notes="Each chunk is a single BufferGeometry containing only visible faces.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="status">accepted</dai:field>
+            <dai:field key="context">Rendering tens of thousands of cubes; InstancedMesh still draws hidden faces and makes per-face UVs awkward.</dai:field>
+            <dai:field key="decision">Build per-chunk BufferGeometry with face culling against neighbouring voxels (including across chunk borders).</dai:field>
+            <dai:field key="consequences">Fewer draw calls and triangles; requires remeshing a chunk (and border neighbours) whenever a block changes.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Repo_index" name="index.html" dai:type="dai.types.software.repository" dai:stepType="repository" dai:notes="The single deliverable file. Contains &#60;style&#62;, HUD markup, importmap and one module script organised into the sections below.">
+      <bpmn:extensionElements>
+        <dai:fields>
+          <dai:field key="platform">github</dai:field>
+          <dai:field key="branch">main</dai:field>
+          <dai:field key="visibility">public</dai:field>
+        </dai:fields>
+      </bpmn:extensionElements>
+      <bpmn:subProcess id="Grp_deps" name="Dependencies" dai:notes="External code loaded from the CDN via the importmap.">
+        <bpmn:task id="Dep_three" name="three" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="0.170.0" dai:package="three" dai:dependencyType="runtime" dai:license="MIT" dai:purpose="WebGL renderer, scene graph, geometry, materials, raycasting." />
+        <bpmn:task id="Dep_plc" name="PointerLockControls" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="0.170.0" dai:package="three/addons/controls/PointerLockControls.js" dai:dependencyType="runtime" dai:license="MIT" dai:purpose="Mouse-look first-person camera with pointer lock." />
+        <bpmn:task id="Dep_noise" name="ImprovedNoise" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="0.170.0" dai:package="three/addons/math/ImprovedNoise.js" dai:dependencyType="runtime" dai:license="MIT" dai:purpose="Perlin noise for heightmaps, caves and tree placement." />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_bootstrap" name="Engine Bootstrap" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Creates the Three.js runtime once at startup." dai:componentType="service">
+        <bpmn:task id="C_renderer" name="Renderer" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="THREE.WebGLRenderer({antialias:false}); setPixelRatio(min(devicePixelRatio,2)); appended to document.body; handles window resize." dai:componentType="service" />
+        <bpmn:task id="C_scene" name="Scene &#38; Sky" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Sky-blue background colour and THREE.Fog matched to render distance so chunk edges fade out." dai:componentType="service" />
+        <bpmn:task id="C_camera" name="Camera" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="PerspectiveCamera(75, aspect, 0.1, 1000) positioned at player eye height (1.6 blocks)." dai:componentType="service" />
+        <bpmn:task id="C_lights" name="Lighting" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="HemisphereLight for ambient sky/ground tint + DirectionalLight as the sun. Simple per-face shading baked into vertex colours (top 1.0, sides 0.8, bottom 0.6)." dai:componentType="service" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_world" name="World" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Voxel data, terrain generation and chunk meshing." dai:componentType="service">
+        <bpmn:task id="M_block" name="BlockType" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="Block registry. IDs: 0 AIR, 1 GRASS, 2 DIRT, 3 STONE, 4 SAND, 5 WOOD, 6 LEAVES, 7 PLANKS, 8 GLASS. Each entry maps faces (top/side/bottom) to atlas tiles." dai:modelFormat="typescript">
+          <bpmn:extensionElements>
+            <dai:properties>
+              <dai:property name="id" type="int" />
+              <dai:property name="name" type="str" />
+              <dai:property name="tiles" type="dict" />
+              <dai:property name="transparent" type="bool" />
+              <dai:property name="solid" type="bool" />
+            </dai:properties>
+          </bpmn:extensionElements>
+        </bpmn:task>
+        <bpmn:task id="M_chunk" name="Chunk" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="16 x 64 x 16 voxel column stored as a flat Uint8Array; index = x + z*16 + y*256." dai:modelFormat="typescript">
+          <bpmn:extensionElements>
+            <dai:properties>
+              <dai:property name="cx" type="int" />
+              <dai:property name="cz" type="int" />
+              <dai:property name="blocks" type="list" />
+              <dai:property name="mesh" type="dict" />
+              <dai:property name="dirty" type="bool" />
+            </dai:properties>
+          </bpmn:extensionElements>
+        </bpmn:task>
+        <bpmn:task id="C_atlas" name="Texture Atlas" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Paints each block tile onto a canvas with seeded per-pixel noise, wraps it in CanvasTexture with magFilter=NearestFilter, colorSpace=SRGB. Exposes uv(tileIndex)." dai:componentType="utility" />
+        <bpmn:task id="C_terrain" name="Terrain Generator" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Deterministic from a seed. Height = 20 + fBm(ImprovedNoise, 4 octaves). Top layer grass (sand near water level), 3 dirt, stone below. Sparse trees (wood trunk + leaf blob) placed via hash of world x/z." dai:componentType="utility" />
+        <bpmn:task id="C_chunkmgr" name="Chunk Manager" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Map&#60;&#39;cx,cz&#39;, Chunk&#62;. Each frame ensures chunks within RENDER_DISTANCE of the player exist (nearest first, max 1 generated per frame) and disposes geometry of chunks beyond it. getBlock/setBlock in world coordinates." dai:componentType="service" />
+        <bpmn:task id="C_mesher" name="Chunk Mesher" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="For each non-air voxel, emits a quad for each of 6 faces whose neighbour is air/transparent (looks into neighbour chunks at borders). Writes position, normal, uv, color attributes + index buffer into one BufferGeometry. Opaque and transparent blocks go into separate meshes." dai:componentType="utility" />
+        <bpmn:sequenceFlow id="Flow_C_terrain_C_chunkmgr" sourceRef="C_terrain" targetRef="C_chunkmgr" />
+        <bpmn:sequenceFlow id="Flow_C_chunkmgr_C_mesher" sourceRef="C_chunkmgr" targetRef="C_mesher" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_player" name="Player" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="First-person controller, physics and block interaction." dai:componentType="service">
+        <bpmn:task id="C_input" name="Input" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Tracks pressed keys (WASD, Space, Shift), mouse buttons and wheel. Digits 1-9 select hotbar slot." dai:componentType="hook" />
+        <bpmn:task id="C_controls" name="PointerLockControls" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Locks pointer on canvas click; ESC unlocks and shows the pause overlay." dai:componentType="hook" />
+        <bpmn:task id="C_physics" name="Physics &#38; Collision" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Player AABB 0.6 x 1.8 x 0.6. Gravity -30 b/s^2, jump velocity 9, walk 4.3 b/s, sprint 5.6. Fixed timestep; resolve movement axis-by-axis (X, then Z, then Y) against solid voxels; onGround flag gates jumping." dai:componentType="utility" />
+        <bpmn:task id="C_raycast" name="Voxel Raycaster" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Amanatides &#38; Woo DDA from camera along view direction, max reach 6 blocks. Returns hit block position and face normal. Drives a wireframe selection box." dai:componentType="utility" />
+        <bpmn:task id="C_interact" name="Block Interaction" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Left click: setBlock(hit, AIR). Right click: setBlock(hit + normal, selected) unless it would intersect the player AABB. Emits BlockChanged." dai:componentType="service" />
+        <bpmn:task id="M_player" name="PlayerState" dai:type="dai.types.software.model" dai:stepType="model" dai:modelFormat="typescript">
+          <bpmn:extensionElements>
+            <dai:properties>
+              <dai:property name="position" type="list" />
+              <dai:property name="velocity" type="list" />
+              <dai:property name="onGround" type="bool" />
+              <dai:property name="selectedSlot" type="int" />
+              <dai:property name="flying" type="bool" />
+            </dai:properties>
+          </bpmn:extensionElements>
+        </bpmn:task>
+        <bpmn:sequenceFlow id="Flow_C_input_C_physics" sourceRef="C_input" targetRef="C_physics" />
+        <bpmn:sequenceFlow id="Flow_C_raycast_C_interact" sourceRef="C_raycast" targetRef="C_interact" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_hud" name="HUD &#38; UI" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Plain HTML/CSS overlays positioned above the canvas." dai:componentType="ui">
+        <bpmn:task id="C_crosshair" name="Crosshair" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Centred CSS &#39;+&#39; with mix-blend-mode: difference." dai:componentType="ui" />
+        <bpmn:task id="C_hotbar" name="Hotbar" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="9 slots rendered from atlas tiles (canvas.toDataURL). Highlights the selected slot; wheel cycles." dai:componentType="ui" />
+        <bpmn:task id="C_overlay" name="Start / Pause Overlay" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Title, controls help and &#39;Click to play&#39;. Visible whenever pointer lock is not active." dai:componentType="ui" />
+        <bpmn:task id="C_debug" name="Debug Panel" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="F3 toggles FPS, XYZ, chunk coords, loaded chunks and triangle count (renderer.info)." dai:componentType="ui" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_persist" name="Persistence" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Saves only player edits, never generated terrain." dai:componentType="service">
+        <bpmn:task id="M_save" name="SaveData" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="Diff of modified blocks keyed by &#39;x,y,z&#39; plus seed and player position." dai:modelFormat="json-schema">
+          <bpmn:extensionElements>
+            <dai:properties>
+              <dai:property name="seed" type="int" />
+              <dai:property name="edits" type="dict" />
+              <dai:property name="player" type="dict" />
+            </dai:properties>
+          </bpmn:extensionElements>
+        </bpmn:task>
+        <bpmn:task id="C_storage" name="localStorage Store" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Debounced write (1s) to localStorage[&#39;voxelcraft-save&#39;]. On load, edits are applied after a chunk is generated." dai:componentType="service" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_events" name="Events" dai:notes="Lightweight in-page EventTarget bus.">
+        <bpmn:task id="Ev_block" name="BlockChanged" dai:type="dai.types.software.event" dai:stepType="event" dai:notes="Marks the owning chunk dirty, plus the neighbour chunk if the block is on a border." dai:producer="Block Interaction" dai:consumers="Chunk Manager, Chunk Mesher, localStorage Store" dai:payloadSchema="{ x:int, y:int, z:int, oldId:int, newId:int }" dai:broker="custom" />
+        <bpmn:task id="Ev_lock" name="PointerLockChange" dai:type="dai.types.software.event" dai:stepType="event" dai:producer="PointerLockControls" dai:consumers="Start / Pause Overlay, Input" dai:payloadSchema="{ locked: bool }" dai:broker="custom" />
+      </bpmn:subProcess>
+      <bpmn:subProcess id="Grp_loop" name="Game Loop (requestAnimationFrame)" dai:notes="Per-frame update order. dt is clamped to 0.05s to avoid tunnelling after tab switches.">
+        <bpmn:startEvent id="Ev_start" name="Page loaded" />
+        <bpmn:task id="L_init" name="Init" dai:notes="Seed RNG, build atlas, create renderer/scene/camera, load save, place player on terrain surface." />
+        <bpmn:startEvent id="L_frame" name="Next frame" />
+        <bpmn:exclusiveGateway id="Gw_locked" name="Pointer locked?" dai:notes="Skip simulation while paused; still render." />
+        <bpmn:task id="L_input" name="Read input" dai:notes="Compute wish direction from keys relative to camera yaw." />
+        <bpmn:task id="L_physics" name="Step physics" dai:notes="Apply gravity/velocity, collide with voxels, update camera position." />
+        <bpmn:task id="L_ray" name="Raycast &#38; interact" dai:notes="Update selection box; handle queued clicks." />
+        <bpmn:task id="L_chunks" name="Stream chunks" dai:notes="Generate/unload chunks around player; remesh up to 2 dirty chunks." />
+        <bpmn:task id="L_render" name="Render" dai:notes="renderer.render(scene, camera); update HUD/debug." />
+        <bpmn:endEvent id="Ev_loop" name="Loop" />
+        <bpmn:sequenceFlow id="Flow_Ev_start_L_init" sourceRef="Ev_start" targetRef="L_init" />
+        <bpmn:sequenceFlow id="Flow_L_frame_Gw_locked" sourceRef="L_frame" targetRef="Gw_locked" />
+        <bpmn:sequenceFlow id="Flow_Gw_locked_L_input" name="yes" sourceRef="Gw_locked" targetRef="L_input" />
+        <bpmn:sequenceFlow id="Flow_L_input_L_physics" sourceRef="L_input" targetRef="L_physics" />
+        <bpmn:sequenceFlow id="Flow_L_physics_L_ray" sourceRef="L_physics" targetRef="L_ray" />
+        <bpmn:sequenceFlow id="Flow_L_ray_L_chunks" sourceRef="L_ray" targetRef="L_chunks" />
+        <bpmn:sequenceFlow id="Flow_L_chunks_L_render" sourceRef="L_chunks" targetRef="L_render" />
+        <bpmn:sequenceFlow id="Flow_L_render_Ev_loop" sourceRef="L_render" targetRef="Ev_loop" />
+      </bpmn:subProcess>
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Grp_quality" name="Quality" dai:notes="Acceptance tests and risks for the game.">
+      <bpmn:task id="T_file" name="Runs from file://" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="e2e" dai:testStatus="not-run" dai:testSteps="1. Double-click index.html in Chrome, Firefox and Safari. 2. Click to play.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">World renders with no console errors; no network requests except the Three.js CDN.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+      <bpmn:task id="T_collide" name="No walking through blocks" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="acceptance" dai:testStatus="not-run" dai:testSteps="1. Walk into a wall at sprint speed. 2. Jump into a 1-block ceiling. 3. Fall from 30 blocks.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">Player never enters a solid voxel and lands on the surface.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+      <bpmn:task id="T_edit" name="Break/place across chunk border" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="acceptance" dai:testStatus="not-run" dai:testSteps="1. Stand at x=15/16 boundary. 2. Break the border block. 3. Place a block back.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">Both chunk meshes update with no missing or hidden faces.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+      <bpmn:task id="T_save" name="Edits persist after reload" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="e2e" dai:testStatus="not-run" dai:testSteps="1. Build a small structure. 2. Reload the page.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">Structure and player position are restored.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+      <bpmn:task id="T_fps" name="Holds 60 FPS" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="performance" dai:testStatus="not-run" dai:testSteps="Fly in a straight line for 60s at render distance 4 on an integrated GPU.">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">Average &gt;= 58 FPS, no frame &gt; 50 ms during chunk streaming.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+      </bpmn:task>
+      <bpmn:task id="Risk_stutter" name="Chunk generation stutter" dai:type="dai.types.business.risk-item" dai:stepType="risk" dai:probability="medium" dai:impact="high" dai:mitigation="Budget work per frame (1 generate + 2 remesh), nearest-first queue; optional Web Worker via Blob URL if needed." dai:owner="engine" />
+      <bpmn:task id="Risk_tunnel" name="Collision tunnelling" dai:type="dai.types.business.risk-item" dai:stepType="risk" dai:probability="medium" dai:impact="medium" dai:mitigation="Clamp dt and sub-step physics so no axis moves more than 0.5 block per step." dai:owner="engine" />
+    </bpmn:subProcess>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="Shape_Grp_context" bpmnElement="Grp_context" isExpanded="true">
+        <dc:Bounds x="40" y="40" width="210" height="615" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Ctx_goal" bpmnElement="Ctx_goal">
+        <dc:Bounds x="65" y="85" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Rule_single_file" bpmnElement="Rule_single_file">
+        <dc:Bounds x="65" y="180" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Rule_cdn" bpmnElement="Rule_cdn">
+        <dc:Bounds x="65" y="275" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Rule_textures" bpmnElement="Rule_textures">
+        <dc:Bounds x="65" y="370" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Rule_perf" bpmnElement="Rule_perf">
+        <dc:Bounds x="65" y="465" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Dec_meshing" bpmnElement="Dec_meshing">
+        <dc:Bounds x="65" y="560" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Repo_index" bpmnElement="Repo_index" isExpanded="true">
+        <dc:Bounds x="275" y="40" width="1443" height="920" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_deps" bpmnElement="Grp_deps" isExpanded="true">
+        <dc:Bounds x="300" y="85" width="210" height="330" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Dep_three" bpmnElement="Dep_three">
+        <dc:Bounds x="325" y="130" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Dep_plc" bpmnElement="Dep_plc">
+        <dc:Bounds x="325" y="225" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Dep_noise" bpmnElement="Dep_noise">
+        <dc:Bounds x="325" y="320" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_bootstrap" bpmnElement="Grp_bootstrap" isExpanded="true">
+        <dc:Bounds x="535" y="85" width="395" height="235" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_renderer" bpmnElement="C_renderer">
+        <dc:Bounds x="560" y="130" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_scene" bpmnElement="C_scene">
+        <dc:Bounds x="745" y="130" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_camera" bpmnElement="C_camera">
+        <dc:Bounds x="560" y="225" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_lights" bpmnElement="C_lights">
+        <dc:Bounds x="745" y="225" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_world" bpmnElement="Grp_world" isExpanded="true">
+        <dc:Bounds x="955" y="85" width="395" height="330" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_M_block" bpmnElement="M_block">
+        <dc:Bounds x="980" y="130" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_M_chunk" bpmnElement="M_chunk">
+        <dc:Bounds x="1165" y="130" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_atlas" bpmnElement="C_atlas">
+        <dc:Bounds x="980" y="225" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_terrain" bpmnElement="C_terrain">
+        <dc:Bounds x="1165" y="225" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_chunkmgr" bpmnElement="C_chunkmgr">
+        <dc:Bounds x="980" y="320" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_mesher" bpmnElement="C_mesher">
+        <dc:Bounds x="1165" y="320" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_player" bpmnElement="Grp_player" isExpanded="true">
+        <dc:Bounds x="300" y="440" width="395" height="330" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_input" bpmnElement="C_input">
+        <dc:Bounds x="325" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_controls" bpmnElement="C_controls">
+        <dc:Bounds x="510" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_physics" bpmnElement="C_physics">
+        <dc:Bounds x="325" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_raycast" bpmnElement="C_raycast">
+        <dc:Bounds x="510" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_interact" bpmnElement="C_interact">
+        <dc:Bounds x="325" y="675" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_M_player" bpmnElement="M_player">
+        <dc:Bounds x="510" y="675" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_hud" bpmnElement="Grp_hud" isExpanded="true">
+        <dc:Bounds x="720" y="440" width="395" height="235" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_crosshair" bpmnElement="C_crosshair">
+        <dc:Bounds x="745" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_hotbar" bpmnElement="C_hotbar">
+        <dc:Bounds x="930" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_overlay" bpmnElement="C_overlay">
+        <dc:Bounds x="745" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_debug" bpmnElement="C_debug">
+        <dc:Bounds x="930" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_persist" bpmnElement="Grp_persist" isExpanded="true">
+        <dc:Bounds x="1140" y="440" width="210" height="235" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_M_save" bpmnElement="M_save">
+        <dc:Bounds x="1165" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_C_storage" bpmnElement="C_storage">
+        <dc:Bounds x="1165" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_events" bpmnElement="Grp_events" isExpanded="true">
+        <dc:Bounds x="1375" y="440" width="210" height="235" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Ev_block" bpmnElement="Ev_block">
+        <dc:Bounds x="1400" y="485" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Ev_lock" bpmnElement="Ev_lock">
+        <dc:Bounds x="1400" y="580" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_loop" bpmnElement="Grp_loop" isExpanded="true">
+        <dc:Bounds x="300" y="795" width="1393" height="140" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Ev_start" bpmnElement="Ev_start">
+        <dc:Bounds x="325" y="857" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_init" bpmnElement="L_init">
+        <dc:Bounds x="386" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_frame" bpmnElement="L_frame">
+        <dc:Bounds x="571" y="857" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Gw_locked" bpmnElement="Gw_locked">
+        <dc:Bounds x="632" y="850" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_input" bpmnElement="L_input">
+        <dc:Bounds x="707" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_physics" bpmnElement="L_physics">
+        <dc:Bounds x="892" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_ray" bpmnElement="L_ray">
+        <dc:Bounds x="1077" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_chunks" bpmnElement="L_chunks">
+        <dc:Bounds x="1262" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_L_render" bpmnElement="L_render">
+        <dc:Bounds x="1447" y="840" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Ev_loop" bpmnElement="Ev_loop">
+        <dc:Bounds x="1632" y="857" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Grp_quality" bpmnElement="Grp_quality" isExpanded="true">
+        <dc:Bounds x="1743" y="40" width="210" height="710" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_file" bpmnElement="T_file">
+        <dc:Bounds x="1768" y="85" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_collide" bpmnElement="T_collide">
+        <dc:Bounds x="1768" y="180" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_edit" bpmnElement="T_edit">
+        <dc:Bounds x="1768" y="275" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_save" bpmnElement="T_save">
+        <dc:Bounds x="1768" y="370" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_T_fps" bpmnElement="T_fps">
+        <dc:Bounds x="1768" y="465" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Risk_stutter" bpmnElement="Risk_stutter">
+        <dc:Bounds x="1768" y="560" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Risk_tunnel" bpmnElement="Risk_tunnel">
+        <dc:Bounds x="1768" y="655" width="160" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_C_terrain_C_chunkmgr" bpmnElement="Flow_C_terrain_C_chunkmgr">
+        <di:waypoint x="1245" y="295" />
+        <di:waypoint x="1245" y="307" />
+        <di:waypoint x="1060" y="307" />
+        <di:waypoint x="1060" y="320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_C_chunkmgr_C_mesher" bpmnElement="Flow_C_chunkmgr_C_mesher">
+        <di:waypoint x="1140" y="355" />
+        <di:waypoint x="1165" y="355" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_C_input_C_physics" bpmnElement="Flow_C_input_C_physics">
+        <di:waypoint x="405" y="555" />
+        <di:waypoint x="405" y="567" />
+        <di:waypoint x="405" y="567" />
+        <di:waypoint x="405" y="580" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_C_raycast_C_interact" bpmnElement="Flow_C_raycast_C_interact">
+        <di:waypoint x="590" y="650" />
+        <di:waypoint x="590" y="662" />
+        <di:waypoint x="405" y="662" />
+        <di:waypoint x="405" y="675" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Ev_start_L_init" bpmnElement="Flow_Ev_start_L_init">
+        <di:waypoint x="361" y="875" />
+        <di:waypoint x="386" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_frame_Gw_locked" bpmnElement="Flow_L_frame_Gw_locked">
+        <di:waypoint x="607" y="875" />
+        <di:waypoint x="632" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Gw_locked_L_input" bpmnElement="Flow_Gw_locked_L_input">
+        <di:waypoint x="682" y="875" />
+        <di:waypoint x="707" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_input_L_physics" bpmnElement="Flow_L_input_L_physics">
+        <di:waypoint x="867" y="875" />
+        <di:waypoint x="892" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_physics_L_ray" bpmnElement="Flow_L_physics_L_ray">
+        <di:waypoint x="1052" y="875" />
+        <di:waypoint x="1077" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_ray_L_chunks" bpmnElement="Flow_L_ray_L_chunks">
+        <di:waypoint x="1237" y="875" />
+        <di:waypoint x="1262" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_chunks_L_render" bpmnElement="Flow_L_chunks_L_render">
+        <di:waypoint x="1422" y="875" />
+        <di:waypoint x="1447" y="875" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_L_render_Ev_loop" bpmnElement="Flow_L_render_Ev_loop">
+        <di:waypoint x="1607" y="875" />
+        <di:waypoint x="1632" y="875" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

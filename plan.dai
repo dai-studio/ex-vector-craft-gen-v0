@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:dai="https://dai.studio/schema/dai/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="https://dai.studio/workflow">
+  <bpmn:process id="Process_1" name="Vector Craft Plan" isExecutable="false">
+    <bpmn:extensionElements>
+      <dai:workflowMeta description="Build plan for Vector Craft, an original voxel sandbox game in plain HTML and Three.js with no build step. Four phases: Foundation, World, Gameplay, Polish and ship. Progress is logged in progress.dai." version="0.1.0" docId="267a74b1-8467-4b36-9370-630b2273ac61" role="plan">
+        <dai:taskTypeEntry stepType="" description="A generic work item or activity in the process flow." />
+        <dai:taskTypeEntry type="dai.types.software.model" stepType="model" description="A data schema or structured type definition. Documents the shape of data flowing through the system and the notation used." />
+        <dai:taskTypeEntry type="dai.types.software.component" stepType="component" description="A UI or software component — its type, props/interface, and usage description. Use it to document your component library, design system elements, or reusable building blocks." />
+        <dai:taskTypeEntry type="dai.types.software.test" stepType="test" description="A test case or verification condition — documents what is being tested, how to run it, and what constitutes a pass." />
+        <dai:taskTypeEntry type="dai.types.software.decision" stepType="" description="A technical or architecture decision record (ADR): the context, the options considered, the decision and its consequences. For business decisions use Business → Decision." />
+      </dai:workflowMeta>
+    </bpmn:extensionElements>
+    <bpmn:startEvent id="event_tcxzndgh" name="Start">
+      <bpmn:outgoing>flow_3p8geyx0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:endEvent id="event_awwwlccg" name="Playable build">
+      <bpmn:incoming>flow_zocpgc1p</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:subProcess id="task_f6438mm0" name="1. Foundation">
+      <bpmn:incoming>flow_3p8geyx0</bpmn:incoming>
+      <bpmn:outgoing>flow_nd04ifie</bpmn:outgoing>
+      <bpmn:task id="task_ismqchob" name="Choose rendering stack" dai:type="dai.types.software.decision" dai:status="accepted" dai:context="Browser voxel sandbox that runs from a static index.html with no build step." dai:decision="Three.js 0.160.0 via ES module import map (cdn.jsdelivr.net), hand-built BufferGeometry per chunk. Game logic modules have no Three.js dependency so they run under node --test." dai:consequences="Fast to build, one external dependency, meshing stays in our code." dai:agentStatus="done">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="options">Three.js via CDN import map; raw WebGL2; Babylon.js</dai:field>
+            <dai:field key="decidedOn">2026-11-07</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:outgoing>flow_3re0bl6j</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_33rgrru9" name="Scaffold project" dai:notes="index.html, src/ ES modules, README.md. Renderer, camera, resize, main loop." dai:agentStatus="done">
+        <bpmn:incoming>flow_3re0bl6j</bpmn:incoming>
+        <bpmn:outgoing>flow_g0c72pxu</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_bski7w4f" name="Block registry" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="Block ids (air, grass, dirt, stone, sand, water, wood, leaves, plank, glass), flat vector-style colours, solid/transparent flags." dai:modelFormat="plain" dai:agentStatus="done">
+        <bpmn:incoming>flow_g0c72pxu</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:sequenceFlow id="flow_3re0bl6j" sourceRef="task_ismqchob" targetRef="task_33rgrru9" />
+      <bpmn:sequenceFlow id="flow_g0c72pxu" sourceRef="task_33rgrru9" targetRef="task_bski7w4f" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="task_tf8f8mye" name="2. World">
+      <bpmn:incoming>flow_nd04ifie</bpmn:incoming>
+      <bpmn:outgoing>flow_ufwhg1v6</bpmn:outgoing>
+      <bpmn:task id="task_wyb0rgba" name="World generation" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="16x16x64 chunks in Uint8Array. Seeded noise heightmap, beaches, water level, trees. Load chunks around the player." dai:componentType="service" dai:agentStatus="done">
+        <bpmn:outgoing>flow_lzr4gzoy</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_w6oq756l" name="Chunk meshing" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Only faces next to air/transparent blocks. Flat vertex colours, per-face shading, simple AO. Opaque and transparent meshes. Remesh on edit." dai:componentType="service" dai:agentStatus="done">
+        <bpmn:incoming>flow_lzr4gzoy</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:sequenceFlow id="flow_lzr4gzoy" sourceRef="task_wyb0rgba" targetRef="task_w6oq756l" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="task_5z8alm27" name="3. Gameplay">
+      <bpmn:incoming>flow_ufwhg1v6</bpmn:incoming>
+      <bpmn:outgoing>flow_61t1xhtu</bpmn:outgoing>
+      <bpmn:task id="task_eta8s8cx" name="Player controller" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Pointer lock, WASD, jump, gravity, AABB collision against voxels, fly toggle." dai:componentType="service" dai:agentStatus="done">
+        <bpmn:outgoing>flow_jfzj4pa7</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_9insw264" name="Block interaction" dai:notes="Voxel raycast (DDA), outline the targeted block, left click breaks, right click places." dai:agentStatus="done">
+        <bpmn:incoming>flow_jfzj4pa7</bpmn:incoming>
+        <bpmn:outgoing>flow_s671s7w6</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_2y63gbab" name="HUD and hotbar" dai:type="dai.types.software.component" dai:stepType="component" dai:notes="Crosshair, 1-9 / scroll hotbar of block types, FPS and coordinates readout, click-to-play overlay." dai:componentType="ui" dai:agentStatus="done">
+        <bpmn:incoming>flow_s671s7w6</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:sequenceFlow id="flow_jfzj4pa7" sourceRef="task_eta8s8cx" targetRef="task_9insw264" />
+      <bpmn:sequenceFlow id="flow_s671s7w6" sourceRef="task_9insw264" targetRef="task_2y63gbab" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="task_8nammjww" name="4. Polish and ship">
+      <bpmn:incoming>flow_61t1xhtu</bpmn:incoming>
+      <bpmn:outgoing>flow_zocpgc1p</bpmn:outgoing>
+      <bpmn:task id="task_00tpunpm" name="Sky, lighting and fog" dai:notes="Gradient sky, directional sun with day/night cycle, distance fog matched to render distance." dai:agentStatus="done">
+        <bpmn:outgoing>flow_gius20i2</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_xbsh9j3p" name="Save and load" dai:notes="Store seed plus edited blocks per chunk in localStorage; reapply on chunk generation." dai:agentStatus="done">
+        <bpmn:incoming>flow_gius20i2</bpmn:incoming>
+        <bpmn:outgoing>flow_rrr31kb0</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="task_0nvclp4r" name="Play test in browser" dai:type="dai.types.software.test" dai:stepType="test" dai:testType="e2e" dai:testStatus="passing" dai:testSteps="Serve folder, open index.html, walk, jump, break and place blocks, reload to confirm saves." dai:agentStatus="done">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="expectedResult">Steady frame rate, no falling through terrain, edits persist.</dai:field>
+            <dai:field key="actualResult">Headless Chrome (SwiftShader software WebGL) over DevTools Protocol, seed 1234: no console errors; 137 chunks drawn / 177 loaded after 5s; stood 2s at y=23 without sinking; walked 5.5 blocks in 1.5s; jumped 1.39 blocks; broke sand and placed glass, chunks remeshed; edit and seed restored after reload; underwater fog shows. 34 fps in software rendering (60 fps once settled). Pointer lock can't run headless, so input was driven through window.vectorCraft.</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>flow_rrr31kb0</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:sequenceFlow id="flow_gius20i2" sourceRef="task_00tpunpm" targetRef="task_xbsh9j3p" />
+      <bpmn:sequenceFlow id="flow_rrr31kb0" sourceRef="task_xbsh9j3p" targetRef="task_0nvclp4r" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="flow_3p8geyx0" sourceRef="event_tcxzndgh" targetRef="task_f6438mm0" />
+    <bpmn:sequenceFlow id="flow_nd04ifie" sourceRef="task_f6438mm0" targetRef="task_tf8f8mye" />
+    <bpmn:sequenceFlow id="flow_ufwhg1v6" sourceRef="task_tf8f8mye" targetRef="task_5z8alm27" />
+    <bpmn:sequenceFlow id="flow_61t1xhtu" sourceRef="task_5z8alm27" targetRef="task_8nammjww" />
+    <bpmn:sequenceFlow id="flow_zocpgc1p" sourceRef="task_8nammjww" targetRef="event_awwwlccg" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="event_tcxzndgh_di" bpmnElement="event_tcxzndgh">
+        <dc:Bounds x="380" y="40" width="40" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_33rgrru9_di" bpmnElement="task_33rgrru9">
+        <dc:Bounds x="350" y="280" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_bski7w4f_di" bpmnElement="task_bski7w4f">
+        <dc:Bounds x="350" y="400" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_g0c72pxu_di" bpmnElement="flow_g0c72pxu">
+        <di:waypoint x="400" y="360" />
+        <di:waypoint x="400" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_wyb0rgba_di" bpmnElement="task_wyb0rgba">
+        <dc:Bounds x="350" y="600" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_w6oq756l_di" bpmnElement="task_w6oq756l">
+        <dc:Bounds x="350" y="720" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_lzr4gzoy_di" bpmnElement="flow_lzr4gzoy">
+        <di:waypoint x="400" y="680" />
+        <di:waypoint x="400" y="720" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_eta8s8cx_di" bpmnElement="task_eta8s8cx">
+        <dc:Bounds x="350" y="920" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_9insw264_di" bpmnElement="task_9insw264">
+        <dc:Bounds x="350" y="1040" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_jfzj4pa7_di" bpmnElement="flow_jfzj4pa7">
+        <di:waypoint x="400" y="1000" />
+        <di:waypoint x="400" y="1040" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_2y63gbab_di" bpmnElement="task_2y63gbab">
+        <dc:Bounds x="350" y="1160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_s671s7w6_di" bpmnElement="flow_s671s7w6">
+        <di:waypoint x="400" y="1120" />
+        <di:waypoint x="400" y="1160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_00tpunpm_di" bpmnElement="task_00tpunpm">
+        <dc:Bounds x="350" y="1360" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_xbsh9j3p_di" bpmnElement="task_xbsh9j3p">
+        <dc:Bounds x="350" y="1480" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_gius20i2_di" bpmnElement="flow_gius20i2">
+        <di:waypoint x="400" y="1440" />
+        <di:waypoint x="400" y="1480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_0nvclp4r_di" bpmnElement="task_0nvclp4r">
+        <dc:Bounds x="350" y="1600" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_rrr31kb0_di" bpmnElement="flow_rrr31kb0">
+        <di:waypoint x="400" y="1560" />
+        <di:waypoint x="400" y="1600" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="event_awwwlccg_di" bpmnElement="event_awwwlccg">
+        <dc:Bounds x="380" y="1760" width="40" height="40" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_ismqchob_di" bpmnElement="task_ismqchob">
+        <dc:Bounds x="350" y="160" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_3re0bl6j_di" bpmnElement="flow_3re0bl6j">
+        <di:waypoint x="400" y="240" />
+        <di:waypoint x="400" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_f6438mm0_di" bpmnElement="task_f6438mm0" isExpanded="true">
+        <dc:Bounds x="290" y="120" width="220" height="390" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_tf8f8mye_di" bpmnElement="task_tf8f8mye" isExpanded="true">
+        <dc:Bounds x="290" y="560" width="220" height="270" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_5z8alm27_di" bpmnElement="task_5z8alm27" isExpanded="true">
+        <dc:Bounds x="290" y="880" width="220" height="390" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_8nammjww_di" bpmnElement="task_8nammjww" isExpanded="true">
+        <dc:Bounds x="290" y="1320" width="220" height="390" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_3p8geyx0_di" bpmnElement="flow_3p8geyx0">
+        <di:waypoint x="400" y="80" />
+        <di:waypoint x="400" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_nd04ifie_di" bpmnElement="flow_nd04ifie">
+        <di:waypoint x="400" y="510" />
+        <di:waypoint x="400" y="560" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_ufwhg1v6_di" bpmnElement="flow_ufwhg1v6">
+        <di:waypoint x="400" y="830" />
+        <di:waypoint x="400" y="880" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_61t1xhtu_di" bpmnElement="flow_61t1xhtu">
+        <di:waypoint x="400" y="1270" />
+        <di:waypoint x="400" y="1320" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="flow_zocpgc1p_di" bpmnElement="flow_zocpgc1p">
+        <di:waypoint x="400" y="1710" />
+        <di:waypoint x="400" y="1760" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

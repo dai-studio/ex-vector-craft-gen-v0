@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:dai="https://dai.studio/schema/dai/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="https://dai.studio/workflow">
+  <bpmn:process id="Process_1" name="Vector Craft Progress" isExecutable="false">
+    <bpmn:extensionElements>
+      <dai:workflowMeta description="Project history for ex-vector-craft-gen: one step per piece of work, building the Vector Craft browser voxel game and testing the DAI Studio MCP tools along the way. Linked to plan.dai." version="0.1.0" docId="9270e9c5-69f9-455f-aae0-763202104423" role="progress" planDoc="267a74b1-8467-4b36-9370-630b2273ac61" planPath="/Users/ted/Dev/_dai/ex-vector-craft-gen/plan.dai">
+        <dai:taskTypeEntry stepType="" description="A generic work item or activity in the process flow." />
+      </dai:workflowMeta>
+    </bpmn:extensionElements>
+    <bpmn:task id="task_pz3w3ydq" name="Set up project history log" dai:notes="2026-11-07: Started testing the DAI Studio MCP additions. Made Test_document.dai the project history: it was empty with role &#39;general&#39;, now set to &#39;progress&#39; (docId 9270e9c5-69f9-455f-aae0-763202104423). Calls used so far: list_documents, get_document, set_document_role, log_step.&#10;Later: the user renamed and moved this file from ~/Desktop/Test_document.dai to ex-vector-craft-gen/progress.dai. The docId stayed the same." dai:agentStatus="done">
+      <bpmn:outgoing>flow_qmd6reqe</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="task_al50h785" name="Create Vector Craft plan" dai:notes="2026-11-07: Made ex-vector-craft-gen/ (it didn&#39;t exist) and plan.dai inside it (role plan). 11 tasks from Start to &#39;Playable build&#39;, using typed tasks: Decision, Model, Component, Test. Linked this history log to the plan. MCP note: one large apply_edits batch was rejected as unparseable JSON; splitting it into batches of 4-5 ops worked." dai:agentStatus="done">
+      <bpmn:incoming>flow_qmd6reqe</bpmn:incoming>
+      <bpmn:outgoing>flow_h3glq0kv</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_qmd6reqe" sourceRef="task_pz3w3ydq" targetRef="task_al50h785" />
+    <bpmn:task id="task_n3u7jb5m" name="Reorganize plan layout" dai:notes="2026-11-07: Plan was a single row about 2,400px wide. Split it into four labelled phase rows (Foundation, World, Gameplay, Polish and ship), each read left to right, now about 970x640. Used one apply_edits batch: group &#39;move&#39; ops plus TextAnnotation labels. Flow order and task ids unchanged." dai:agentStatus="done">
+      <bpmn:incoming>flow_h3glq0kv</bpmn:incoming>
+      <bpmn:outgoing>flow_yw4idk04</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_h3glq0kv" sourceRef="task_al50h785" targetRef="task_n3u7jb5m" />
+    <bpmn:task id="task_w8q788dp" name="Relayout plan as vertical flow" dai:notes="2026-11-07: The 4-row layout made arrows wrap back across rows. Changed to one top-to-bottom column, with bigger gaps between phases and the phase labels on the left. Saved edges are all straight vertical lines.&#10;MCP findings:&#10;(1) A new bpmn:SubProcess comes in at 100x80, and moving a child into it doesn&#39;t resize the container or move the child. There&#39;s no op to set a container&#39;s size.&#10;(2) move with parent &#34;&#34; or null is accepted but does nothing. There&#39;s no way to move a task back to the top level.&#10;(3) Deleting a container also deletes its children, with no warning. &#39;Choose rendering stack&#39; was lost and recreated with the same fields; its new id is task_ismqchob.&#10;(4) TextAnnotation names show in the outline but are saved as empty &#60;bpmn:textAnnotation/&#62; with no &#60;bpmn:text&#62;, and update notes is refused. Labels may be lost when the file is reopened." dai:agentStatus="done">
+      <bpmn:incoming>flow_yw4idk04</bpmn:incoming>
+      <bpmn:outgoing>flow_vranm081</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_yw4idk04" sourceRef="task_n3u7jb5m" targetRef="task_w8q788dp" />
+    <bpmn:task id="task_agaayr0l" name="Fix MCP apply_edits issues" dai:notes="2026-11-07: Paused ex-vector-craft-gen. Root causes are in ws-dai-studio/editor-src/src/embed/agentApi.ts:&#10;- add type bpmn:SubProcess builds a Task (TASKLIKE is mapped to bpmn:Task). It only became a container when a child was moved in, and then at 100x80, which cuts off content outside it.&#10;- add sets bo.name, but a TextAnnotation keeps its text in bo.text.&#10;- move treats parent &#34;&#34;/null as &#39;no change&#39;.&#10;- delete runs editing.remove, which also removes the container&#39;s children.&#10;- There&#39;s no way to size or resize a container.&#10;The tool schema is in app-dai-studio/src-tauri/src/mcp/tools.rs.&#10;Fixed in agentApi.ts / agentTypes.ts:&#10;- add keeps bpmn:SubProcess as a container (360x240) and takes size.&#10;- add writes TextAnnotation text to bo.text.&#10;- move with parent null/&#34;&#34; goes to the top level. Into a container without dx/dy, shapes keep their layout and go to its top-left. Containers grow to fit their content.&#10;- New resize op (x/y/width/height, or fit:true).&#10;- delete of a container with content is refused unless children is &#39;keep&#39; (move out first) or &#39;delete&#39;.&#10;Added 7 tests: editor 333/333, app 80/80, Rust MCP 18/18. tools.rs schema and server instructions updated, vendored editor rebuilt with make editor. Needs a DAI Studio restart to take effect. Not fixed: the large apply_edits batch failing to parse came from the client sending bad JSON, not from the server." dai:agentStatus="done">
+      <bpmn:incoming>flow_vranm081</bpmn:incoming>
+      <bpmn:outgoing>flow_xtbmzv1h</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_vranm081" sourceRef="task_w8q788dp" targetRef="task_agaayr0l" />
+    <bpmn:task id="task_ewd56n6d" name="Verify MCP fixes in running app" dai:notes="2026-11-07: Tested on the tauri dev build in the empty Untitled window, then deleted the test shapes. All 5 fixes work: SubProcess is added as a 360x240 container; moving into it places shapes at its top-left (+30,+40); parent:null moves to the top level; resize fit hugs the content; deleting a container with content is refused, and children:&#39;keep&#39; moves the content out and keeps its flow; annotation text is saved as &#60;bpmn:text&#62;.&#10;New issue: new_document and open_document fail with &#34;The document&#39;s window didn&#39;t finish loading. Is DAI Studio signed in?&#34; The .dai file is written, but its window never reports ready. Existing windows work fine.&#10;Correction: the window failure wasn&#39;t a sign-in problem. The test files were in /private/tmp (Claude&#39;s scratchpad), a path the editor can&#39;t read. The real problem is the misleading error message: it should say the path can&#39;t be reached, not ask about sign-in." dai:agentStatus="done">
+      <bpmn:incoming>flow_xtbmzv1h</bpmn:incoming>
+      <bpmn:outgoing>flow_3z0tug0g</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_xtbmzv1h" sourceRef="task_agaayr0l" targetRef="task_ewd56n6d" />
+    <bpmn:task id="task_nkzn484x" name="Clear errors for unreadable paths" dai:notes="2026-11-07: The window showed Tauri&#39;s &#34;forbidden path ... allow-read-text-file&#34; dialog, but MCP only timed out and suggested a sign-in problem. The window then fell back to a blank Untitled document, which MCP could have treated as the requested file.&#10;Fixes (app-dai-studio):&#10;- check_editor_can_read checks the real path against the fs scope roots (home, Documents, Desktop, Downloads) before opening a window. new_document runs it before writing anything.&#10;- New mcp_window_failed command. +page.svelte calls it before showing the error dialog.&#10;- wait_ready fails at once if the window reports an error or loads a different document.&#10;Verified live: new_document on /private/tmp failed immediately with the clear message, and no file was written. Tests: Rust 20/20 at the time." dai:agentStatus="done">
+      <bpmn:incoming>flow_3z0tug0g</bpmn:incoming>
+      <bpmn:outgoing>flow_ee6swhoz</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_3z0tug0g" sourceRef="task_ewd56n6d" targetRef="task_nkzn484x" />
+    <bpmn:task id="task_kmjmn4dd" name="Fix stale window links; rows of 8" dai:notes="2026-11-07: Rebuilding the editor reloaded the dev windows. They came back as Untitled, but Rust still linked them to plan.dai and progress.dai, so MCP kept picking the blank window. (The new check refused to edit it.)&#10;Fixes: +page.svelte always calls setWindowFile(doc.path), so a window loaded without a file clears its link. MCP resolve skips a linked window that reports a different document and opens a new one (shows_other_doc, plus a test).&#10;Also: log_step now wraps rows every 8 steps instead of 6 (ROW_LENGTH; test updated).&#10;Test_document.dai was renamed by the user to ex-vector-craft-gen/progress.dai. Tests: editor 333/333, app 80/80, Rust MCP 21/21." dai:agentStatus="done">
+      <bpmn:incoming>flow_ee6swhoz</bpmn:incoming>
+      <bpmn:outgoing>flow_e2s337q8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_ee6swhoz" sourceRef="task_nkzn484x" targetRef="task_kmjmn4dd" />
+    <bpmn:task id="task_j99sto7s" name="Group plan into phase containers" dai:notes="2026-11-07: Replaced the 4 empty phase labels with SubProcess containers stacked in one column: 1. Foundation (task_f6438mm0), 2. World (task_tf8f8mye), 3. Gameplay (task_5z8alm27), 4. Polish and ship (task_8nammjww). Flows now run Start → phase 1 → 2 → 3 → 4 → Playable build, with each phase&#39;s tasks chained inside it. All 12 saved arrows are straight vertical lines. All 11 plan task ids and statuses are unchanged. get_plan returns them in the same order, each with its phase path. Done as one apply_edits batch, using the new size and move-into-parent with dx/dy." dai:agentStatus="done">
+      <bpmn:incoming>flow_e2s337q8</bpmn:incoming>
+      <bpmn:outgoing>flow_0xlcc30u</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_e2s337q8" sourceRef="task_kmjmn4dd" targetRef="task_j99sto7s" />
+    <bpmn:task id="task_56nohg7t" name="Fix progress.dai; add set_document_info" dai:notes="2026-11-07: MCP had no way to rename a document or set its description. Added the set_document_info tool (tools.rs: optional name / description, passed to the editor&#39;s existing setMeta; one undo step). Rust MCP tests 21/21. The client picked up the new tool after the dev app restarted.&#10;Used it to rename this document from &#39;Untitled Workflow&#39; to &#39;Vector Craft Progress&#39; and give both documents descriptions. Noted on the first step that Test_document.dai is now ex-vector-craft-gen/progress.dai." dai:agentStatus="done">
+      <bpmn:incoming>flow_0xlcc30u</bpmn:incoming>
+      <bpmn:outgoing>flow_ni89u3ks</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_0xlcc30u" sourceRef="task_j99sto7s" targetRef="task_56nohg7t" />
+    <bpmn:task id="task_ll5owu00" name="Choose rendering stack" dai:notes="2026-11-07: Confirming the stack: Three.js 0.160.0 as an ES module from cdn.jsdelivr.net through an import map, with no build step. Game logic (noise, world, meshing, raycast, physics) stays free of Three.js so it can be unit-tested with node --test.&#10;Decision record on the plan set to &#39;accepted&#39;, decided 2026-11-07." dai:agentStatus="done" dai:planRef="task_ismqchob">
+      <bpmn:incoming>flow_ni89u3ks</bpmn:incoming>
+      <bpmn:outgoing>flow_g9wmmjmc</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_ni89u3ks" sourceRef="task_56nohg7t" targetRef="task_ll5owu00" />
+    <bpmn:task id="task_gnca4kqw" name="Scaffold project" dai:notes="2026-11-07: Adding index.html (import map, canvas, HUD root), src/ ES modules, package.json (only for &#39;node --test&#39;), README.md and a fixed-step main loop.&#10;Added index.html, src/style.css, src/engine.js (renderer, camera, resize, 60 Hz fixed-step loop that caps a frame at 0.25s), a placeholder src/main.js and package.json (npm test = node --test tests/). Checked that the CDN URL returns 200." dai:agentStatus="done" dai:planRef="task_33rgrru9">
+      <bpmn:incoming>flow_g9wmmjmc</bpmn:incoming>
+      <bpmn:outgoing>flow_w2slbfdz</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_g9wmmjmc" sourceRef="task_ll5owu00" targetRef="task_gnca4kqw" />
+    <bpmn:task id="task_r5thkctp" name="Block registry" dai:notes="2026-11-07: Writing src/blocks.js: ids, names, solid and transparent flags, and flat top/side/bottom colours, plus tests.&#10;src/blocks.js: 10 blocks with solid, opaque, alpha and liquid flags; HOTBAR of 9 blocks; rgb() and css() colour helpers. tests/blocks.test.mjs passes 5/5. npm test is now plain `node --test`, because Node 24 doesn&#39;t accept a folder argument." dai:agentStatus="done" dai:planRef="task_bski7w4f">
+      <bpmn:incoming>flow_w2slbfdz</bpmn:incoming>
+      <bpmn:outgoing>flow_2vp7c1zc</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_w2slbfdz" sourceRef="task_gnca4kqw" targetRef="task_r5thkctp" />
+    <bpmn:task id="task_vdjqqqg4" name="World generation" dai:notes="2026-11-07: Writing src/noise.js (seeded 2D simplex noise plus fbm) and src/world.js (16x16x64 chunks, heightmap terrain, beaches, water at y=20, trees kept inside their chunk, get/set block, edit tracking), plus tests.&#10;Added src/noise.js (mulberry32, simplex noise, fbm, hash2) and src/world.js (createGenerator, terrainHeight, generateChunk, and a World class with ensure/unload/getBlock/setBlock/surfaceY, edits stored per chunk and reapplied on regeneration, and neighbour chunks marked dirty on border edits). Terrain tuned over a 512x512 area for 3 seeds: about 21-26% water, 8-12% hills above y=32, 1-4% rocky peaks, max height 52. tests/world.test.mjs passes 6/6 (11/11 overall)." dai:agentStatus="done" dai:planRef="task_wyb0rgba">
+      <bpmn:incoming>flow_2vp7c1zc</bpmn:incoming>
+      <bpmn:outgoing>flow_p0655yhb</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_2vp7c1zc" sourceRef="task_r5thkctp" targetRef="task_vdjqqqg4" />
+    <bpmn:task id="task_gpxk6ytq" name="Chunk meshing" dai:notes="2026-11-07: Writing src/mesher.js: pure typed-array output with face culling, flat per-face shading, per-vertex ambient occlusion with a quad flip, slight per-block colour variation, separate opaque and transparent buffers, and a lowered water surface. Plus tests.&#10;Added src/mesher.js (buildChunkMesh: face culling via faceVisible, per-face shading, 3-neighbour AO with diagonal flip, ±3.5% per-block tint, rgb opaque / rgba transparent buffers, water surface at 0.875) and src/chunks.js (ChunkRenderer: generates 2 and meshes 3 chunks per frame nearest-first, only meshes a chunk once its 4 neighbours exist, remeshAround for instant edit feedback, unloads beyond radius+3, converts sRGB to linear for vertex colours, setLight for day/night). tests/mesher.test.mjs passes 7/7 (18/18 overall); the 2 failures on the first run were bugs in the tests." dai:agentStatus="done" dai:planRef="task_w6oq756l">
+      <bpmn:incoming>flow_p0655yhb</bpmn:incoming>
+      <bpmn:outgoing>flow_buuvrw0c</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_p0655yhb" sourceRef="task_vdjqqqg4" targetRef="task_gpxk6ytq" />
+    <bpmn:task id="task_bm1msop4" name="Player controller" dai:notes="2026-11-07: Writing src/physics.js (Three-free AABB vs voxel collision, moving one axis at a time, with ground and water detection) and src/player.js (pointer lock, mouse look, WASD, Space to jump, Shift to sprint, F to toggle fly, swimming), plus physics tests.&#10;Added src/physics.js (overlapsSolid; moveAxis snaps flush to block faces and refuses moves from inside blocks; step handles walk 4.6 / sprint 7.5 / swim 3 / fly 10 m/s, gravity 28, jump 8.6 for about 1.3 blocks, terminal 40, eased grip, and water sink/swim) and src/player.js (pointer lock look, WASD or arrows, Space, Shift to sprint or descend, F to fly, frozen until spawn terrain loads, eye and look vectors for raycasts). tests/physics.test.mjs passes 7/7 (25/25 overall)." dai:agentStatus="done" dai:planRef="task_eta8s8cx">
+      <bpmn:incoming>flow_buuvrw0c</bpmn:incoming>
+      <bpmn:outgoing>flow_7fwfkmfr</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_buuvrw0c" sourceRef="task_gpxk6ytq" targetRef="task_bm1msop4" />
+    <bpmn:task id="task_nie59bcp" name="Block interaction" dai:notes="2026-11-07: Writing src/raycast.js (Three-free voxel DDA that skips air and water and reports the hit block and the cell in front of it) and src/interact.js (target outline, left click to break, right click to place, never inside the player), plus tests.&#10;Added src/raycast.js (raycast DDA: skips the starting cell, sees through water, returns hit, prev, normal, id and distance to the near face; blocksPlayer for the placement check) and src/interact.js (dark edge outline on the target, left click breaks, right click places, holding repeats every 0.22s, and an edit remeshes the chunks around it straight away). tests/raycast.test.mjs passes 5/5 (30/30 overall). The one failure on the first run was a wrong expected distance in the test." dai:agentStatus="done" dai:planRef="task_9insw264">
+      <bpmn:incoming>flow_7fwfkmfr</bpmn:incoming>
+      <bpmn:outgoing>flow_adgn8pj3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_7fwfkmfr" sourceRef="task_bm1msop4" targetRef="task_nie59bcp" />
+    <bpmn:task id="task_m4bepscx" name="HUD and hotbar" dai:notes="2026-11-07: Writing src/hud.js: crosshair, 9-slot hotbar with flat isometric cube swatches (keys 1-9 and the scroll wheel), the selected block&#39;s name, an FPS / position / chunks readout, and a click-to-play overlay with controls and a New world button.&#10;Added src/hud.js: crosshair, hotbar of 9 SVG isometric cube swatches drawn from block colours (glass and water semi-transparent), keys 1-9 and wheel selection with the block name fading after 1.2s, an info panel, and an overlay with the controls table and a New world button that asks for confirmation. Styles are in src/style.css (smaller slots under 600px wide). It gets checked in the browser play test." dai:agentStatus="done" dai:planRef="task_2y63gbab">
+      <bpmn:incoming>flow_adgn8pj3</bpmn:incoming>
+      <bpmn:outgoing>flow_ya0l7fdp</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_adgn8pj3" sourceRef="task_nie59bcp" targetRef="task_m4bepscx" />
+    <bpmn:task id="task_546z7frf" name="Sky, lighting and fog" dai:notes="2026-11-07: Writing src/daycycle.js (Three-free: time of day → sky colour, fog colour and light level, keyframed through night, dawn, day and dusk) and src/sky.js (background, distance fog tied to render distance, flat square sun and moon that follow the camera, light applied to chunk materials), plus tests.&#10;Added src/daycycle.js (10-minute day starting at 07:12; keyframes night 0x0b1026 at light 0.3, dawn, day 0x8ec9ff at 1.0, dusk; sun and moon directions; clock()) and src/sky.js (background colour, fog from 46% to 92% of the view distance, flat square sun and moon 400 units out that face the camera and fade below the horizon). The light level scales chunk material colour. tests/daycycle.test.mjs passes 4/4 (34/34 overall). Fixed a float floor bug in clock(), where 06:30 showed as 06:29." dai:agentStatus="done" dai:planRef="task_00tpunpm">
+      <bpmn:incoming>flow_ya0l7fdp</bpmn:incoming>
+      <bpmn:outgoing>flow_3lzutcbc</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_ya0l7fdp" sourceRef="task_m4bepscx" targetRef="task_546z7frf" />
+    <bpmn:task id="task_541xmqay" name="Save and load" dai:notes="2026-11-07: Writing src/storage.js (seed, block edits by chunk, player position, look direction, flying, time and selected block in localStorage; every access wrapped in try/catch; versioned key) and the final src/main.js that wires everything together, saving after edits, every 5s and on page hide. Plus tests with an in-memory storage stub.&#10;Added src/storage.js (key vector-craft:v1; serialize/deserialize check every field and drop bad entries; load/save/clear never throw) and the final src/main.js (seed from save, then ?seed=, then random; dry-land spawn found by ring search; player frozen until its chunk loads; respawn below y=-32; saves 0.8s after an edit, every 5s and on page hide or unload; New world clears the save and reloads, with a flag so the unload save doesn&#39;t write it back). Fixed sky.js: THREE.Fog copies its colour, so it&#39;s now synced each frame; added an underwater blue tint with short fog. tests/storage.test.mjs passes 5/5 (39/39 overall). All src files parse." dai:agentStatus="done" dai:planRef="task_xbsh9j3p">
+      <bpmn:incoming>flow_3lzutcbc</bpmn:incoming>
+      <bpmn:outgoing>flow_tz2lrmjh</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_3lzutcbc" sourceRef="task_546z7frf" targetRef="task_541xmqay" />
+    <bpmn:task id="task_y7b9phzp" name="Play test in browser" dai:notes="2026-11-07: Serving the folder on localhost:8080 and playing it in Chrome with the claude-in-chrome tools: check the console, the overlay and HUD, terrain rendering, movement, breaking and placing, and that saves survive a reload.&#10;The claude-in-chrome extension wasn&#39;t connected, so I drove headless Chrome over the DevTools Protocol with a scratch script (Node 24 WebSocket). Results: no console errors; terrain loads and renders; standing, walking (5.5 blocks in 1.5s), jumping (1.39) and swimming work; break and place work and remesh; the save survives a reload; the underwater tint works. Fixes from the test: water alpha 0.62 → 0.8 with darker colours (shallow water read as ice), and an inline SVG favicon (the only 404). Added README.md. Not covered headless: real pointer-lock mouse look and clicks. The plan&#39;s Test task is set to passing, with the details in actualResult." dai:agentStatus="done" dai:planRef="task_0nvclp4r">
+      <bpmn:incoming>flow_tz2lrmjh</bpmn:incoming>
+      <bpmn:outgoing>flow_y5b0vdnq</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_tz2lrmjh" sourceRef="task_541xmqay" targetRef="task_y7b9phzp" />
+    <bpmn:task id="task_298ztco5" name="3x speed demo video" dai:notes="2026-11-07: Made ex-vector-craft-3x.mov from ex-vector-craft.mov (original untouched). ffmpeg isn&#39;t installed, so I used a scratch Swift script with AVFoundation (AVMutableComposition.scaleTimeRange, exported with the HighestQuality preset). 956.4s → 318.8s, still 3834x2100 H.264 with no audio, 654 MB → 198 MB, export took 113s." dai:agentStatus="done">
+      <bpmn:incoming>flow_y5b0vdnq</bpmn:incoming>
+      <bpmn:outgoing>flow_wempb22u</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_y5b0vdnq" sourceRef="task_y7b9phzp" targetRef="task_298ztco5" />
+    <bpmn:task id="task_jc1m97tx" name="Route row wraps bottom to top" dai:notes="2026-11-07: The user asked for the arrow that wraps to a new row to leave the bottom of the row&#39;s last step and enter the top of the next row&#39;s first step.&#10;- appendStep now gives a wrapping arrow a saved route (wrapRoute: down from the bottom centre, across the middle of the gap between rows, down into the top centre). Saved routes are marked manual, so they keep their shape when steps move.&#10;- apply_edits update takes waypoints for a connection, documented in tools.rs.&#10;- Tests: editor 334/334 (wrap route test and waypoints test added), Rust MCP 21/21.&#10;- Fixed this document&#39;s 2 existing wraps (flow_e2s337q8, flow_7fwfkmfr) with waypoints. They were already auto-routed bottom to top, but the second had a 1px kink (y 364 then 365)." dai:agentStatus="done">
+      <bpmn:incoming>flow_wempb22u</bpmn:incoming>
+      <bpmn:outgoing>flow_2jc9mmqj</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_wempb22u" sourceRef="task_298ztco5" targetRef="task_jc1m97tx" />
+    <bpmn:task id="task_ygr8kbfr" name="Wrap test 1: fill row 3" dai:notes="2026-11-07: Live test of the wrap route, asked for by the user. This is the 8th step in row 3, so it should sit at the end of the row, joined from the side." dai:agentStatus="done">
+      <bpmn:incoming>flow_2jc9mmqj</bpmn:incoming>
+      <bpmn:outgoing>flow_5jx89czb</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_2jc9mmqj" sourceRef="task_jc1m97tx" targetRef="task_ygr8kbfr" />
+    <bpmn:task id="task_ovdagyix" name="Wrap test 2: start row 4" dai:notes="2026-11-07: Live test of the wrap route. As the 25th step, this should start row 4 under the first step of row 3, with its arrow leaving the bottom of &#39;Wrap test 1&#39; and entering the top of this step.&#10;Result: passed. Saved route (1510,470) → (1510,500) → (250,500) → (250,530): out of the bottom centre of Wrap test 1 (row 3 ends at y=470), across the middle of the 60px gap, into the top centre of this step at (200,530), which sits under the start of row 3. Wrap test 1 joined from the side at y=430 as expected." dai:agentStatus="done">
+      <bpmn:incoming>flow_5jx89czb</bpmn:incoming>
+    </bpmn:task>
+    <bpmn:sequenceFlow id="flow_5jx89czb" sourceRef="task_ygr8kbfr" targetRef="task_ovdagyix" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="task_pz3w3ydq_di" bpmnElement="task_pz3w3ydq">
+        <dc:Bounds x="200" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="task_al50h785_di" bpmnElement="task_al50h785">
+        <dc:Bounds x="380" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_qmd6reqe_di" bpmnElement="flow_qmd6reqe">
+        <di:waypoint x="300" y="150" />
+        <di:waypoint x="380" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_n3u7jb5m_di" bpmnElement="task_n3u7jb5m">
+        <dc:Bounds x="560" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_h3glq0kv_di" bpmnElement="flow_h3glq0kv">
+        <di:waypoint x="480" y="150" />
+        <di:waypoint x="560" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_w8q788dp_di" bpmnElement="task_w8q788dp">
+        <dc:Bounds x="740" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_yw4idk04_di" bpmnElement="flow_yw4idk04">
+        <di:waypoint x="660" y="150" />
+        <di:waypoint x="740" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_agaayr0l_di" bpmnElement="task_agaayr0l">
+        <dc:Bounds x="920" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_vranm081_di" bpmnElement="flow_vranm081">
+        <di:waypoint x="840" y="150" />
+        <di:waypoint x="920" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_ewd56n6d_di" bpmnElement="task_ewd56n6d">
+        <dc:Bounds x="1100" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_xtbmzv1h_di" bpmnElement="flow_xtbmzv1h">
+        <di:waypoint x="1020" y="150" />
+        <di:waypoint x="1100" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_nkzn484x_di" bpmnElement="task_nkzn484x">
+        <dc:Bounds x="1280" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_3z0tug0g_di" bpmnElement="flow_3z0tug0g">
+        <di:waypoint x="1200" y="150" />
+        <di:waypoint x="1280" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_kmjmn4dd_di" bpmnElement="task_kmjmn4dd">
+        <dc:Bounds x="1460" y="110" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_ee6swhoz_di" bpmnElement="flow_ee6swhoz">
+        <di:waypoint x="1380" y="150" />
+        <di:waypoint x="1460" y="150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_j99sto7s_di" bpmnElement="task_j99sto7s">
+        <dc:Bounds x="200" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_e2s337q8_di" bpmnElement="flow_e2s337q8">
+        <di:waypoint x="1510" y="190" />
+        <di:waypoint x="1510" y="220" />
+        <di:waypoint x="250" y="220" />
+        <di:waypoint x="250" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_56nohg7t_di" bpmnElement="task_56nohg7t">
+        <dc:Bounds x="380" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_0xlcc30u_di" bpmnElement="flow_0xlcc30u">
+        <di:waypoint x="300" y="290" />
+        <di:waypoint x="380" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_ll5owu00_di" bpmnElement="task_ll5owu00">
+        <dc:Bounds x="560" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_ni89u3ks_di" bpmnElement="flow_ni89u3ks">
+        <di:waypoint x="480" y="290" />
+        <di:waypoint x="560" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_gnca4kqw_di" bpmnElement="task_gnca4kqw">
+        <dc:Bounds x="740" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_g9wmmjmc_di" bpmnElement="flow_g9wmmjmc">
+        <di:waypoint x="660" y="290" />
+        <di:waypoint x="740" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_r5thkctp_di" bpmnElement="task_r5thkctp">
+        <dc:Bounds x="920" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_w2slbfdz_di" bpmnElement="flow_w2slbfdz">
+        <di:waypoint x="840" y="290" />
+        <di:waypoint x="920" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_vdjqqqg4_di" bpmnElement="task_vdjqqqg4">
+        <dc:Bounds x="1100" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_2vp7c1zc_di" bpmnElement="flow_2vp7c1zc">
+        <di:waypoint x="1020" y="290" />
+        <di:waypoint x="1100" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_gpxk6ytq_di" bpmnElement="task_gpxk6ytq">
+        <dc:Bounds x="1280" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_p0655yhb_di" bpmnElement="flow_p0655yhb">
+        <di:waypoint x="1200" y="290" />
+        <di:waypoint x="1280" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_bm1msop4_di" bpmnElement="task_bm1msop4">
+        <dc:Bounds x="1460" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_buuvrw0c_di" bpmnElement="flow_buuvrw0c">
+        <di:waypoint x="1380" y="290" />
+        <di:waypoint x="1460" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_nie59bcp_di" bpmnElement="task_nie59bcp">
+        <dc:Bounds x="200" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_7fwfkmfr_di" bpmnElement="flow_7fwfkmfr">
+        <di:waypoint x="1510" y="330" />
+        <di:waypoint x="1510" y="360" />
+        <di:waypoint x="250" y="360" />
+        <di:waypoint x="250" y="390" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_m4bepscx_di" bpmnElement="task_m4bepscx">
+        <dc:Bounds x="380" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_adgn8pj3_di" bpmnElement="flow_adgn8pj3">
+        <di:waypoint x="300" y="430" />
+        <di:waypoint x="380" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_546z7frf_di" bpmnElement="task_546z7frf">
+        <dc:Bounds x="560" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_ya0l7fdp_di" bpmnElement="flow_ya0l7fdp">
+        <di:waypoint x="480" y="430" />
+        <di:waypoint x="560" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_541xmqay_di" bpmnElement="task_541xmqay">
+        <dc:Bounds x="740" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_3lzutcbc_di" bpmnElement="flow_3lzutcbc">
+        <di:waypoint x="660" y="430" />
+        <di:waypoint x="740" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_y7b9phzp_di" bpmnElement="task_y7b9phzp">
+        <dc:Bounds x="920" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_tz2lrmjh_di" bpmnElement="flow_tz2lrmjh">
+        <di:waypoint x="840" y="430" />
+        <di:waypoint x="920" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_298ztco5_di" bpmnElement="task_298ztco5">
+        <dc:Bounds x="1100" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_y5b0vdnq_di" bpmnElement="flow_y5b0vdnq">
+        <di:waypoint x="1020" y="430" />
+        <di:waypoint x="1100" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_jc1m97tx_di" bpmnElement="task_jc1m97tx">
+        <dc:Bounds x="1280" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_wempb22u_di" bpmnElement="flow_wempb22u">
+        <di:waypoint x="1200" y="430" />
+        <di:waypoint x="1280" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_ygr8kbfr_di" bpmnElement="task_ygr8kbfr">
+        <dc:Bounds x="1460" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_2jc9mmqj_di" bpmnElement="flow_2jc9mmqj">
+        <di:waypoint x="1380" y="430" />
+        <di:waypoint x="1460" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="task_ovdagyix_di" bpmnElement="task_ovdagyix">
+        <dc:Bounds x="200" y="530" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="flow_5jx89czb_di" bpmnElement="flow_5jx89czb">
+        <di:waypoint x="1510" y="470" />
+        <di:waypoint x="1510" y="500" />
+        <di:waypoint x="250" y="500" />
+        <di:waypoint x="250" y="530" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
